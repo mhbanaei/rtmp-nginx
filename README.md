@@ -1,4 +1,5 @@
 # rtmp-nginx
+Also Works with Aparat Platform
 Pushing RTMP data as Restreaming Service 
 
 Requirement Package:
