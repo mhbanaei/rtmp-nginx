@@ -56,7 +56,7 @@ def run_ffmpeg():
         "-vsync", "-1",
         "-c", "copy",
         "-f", "flv",
-        "rtmp://rtmp.cdn.asset.aparat.com:443/event/ecdc2e3262856666bcf4e1c77b249acf2?s=5acbd8934d8349c7"
+        "rtmp://rtmp.cdn.asset.aparat.com:443/event/Streamkey" #inja streamkey khodeton ro vared konid
     ]
     print("🚀 Starting ffmpeg...")
     process = subprocess.Popen(command)
