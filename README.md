@@ -31,3 +31,32 @@ Very Simple :
 		py auth_server.py 
 # note
 	Tested on For Windows Server 2022 
+	
+#📌 Important Notes:
+
+Since Aparat may block direct streaming from some systems, it's recommended to use FFmpeg for relaying your stream.
+
+You can download a reliable FFmpeg build from the official source: https://www.gyan.dev/ffmpeg/builds/
+
+Recommended file: ffmpeg-release-essentials.zip
+
+After downloading and extracting the files, add the following path to your system’s Environment Variables so you can run FFmpeg from anywhere:
+
+Path: C:\ffmpeg\bin
+
+How to add:
+
+Right-click on This PC, go to Properties.
+
+Click on Advanced system settings.
+
+In the Environment Variables section, find System variables, select Path, and click Edit.
+
+Add the path C:\ffmpeg\bin and save.
+
+To verify FFmpeg is installed correctly, open a terminal or command prompt and run:
+
+```
+ffmpeg -version
+```
+
