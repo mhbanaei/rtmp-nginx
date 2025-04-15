@@ -1,3 +1,17 @@
+# RTMP Stream Manager with Flask & FFmpeg
+	This project allows dynamic control of RTMP streaming using a Flask server and FFmpeg. You can start, stop, and authenticate incoming RTMP streams via HTTP endpoints. It's perfect for building a lightweight live stream redirector with basic access control.
+# ✅ Features	
+* Secure RTMP Authentication (based on custom stream keys)
+* Start/Stop streaming dynamically using HTTP endpoints
+* Auto-retry with error handling for stream stability
+* Multi-threaded design using Python and Flask
+* Built-in FFmpeg integration for RTMP pulling and pushing
+
+# Requirements
+* Python 3.7+
+* FFmpeg (installed and accessible visa path)
+* Flask (on python)
+
 # rtmp-nginx
 Also Works with Aparat Platform
 Pushing RTMP data as Restreaming Service 
@@ -15,11 +29,11 @@ Requirement For auth_server.py
 A Flask-based APi to validate stream keys for different servers 
 
 # How It Works 
- Endpoint: POST /auth
- Params:
-	server : Server name (query parameter)
-	name : Stream Key (form data)
-Validates if the stream key matches the one for the specified serve.
+* Streamers push to your RTMP server (e.g., SRS or NGINX-RTMP).
+* The /auth endpoint validates the stream key.
+* When you POST to /start, the server starts an FFmpeg process to pull the stream and restream it to your desired output.
+* POST to /stop to terminate the FFmpeg process cleanly.
+* If the stream crashes or fails, the system will retry up to 3 times before disabling itself until manually re-enabled via /start.
 
 # Example 
 	Request : POST /auth?server=live1 with name=key1_live1
@@ -30,22 +44,42 @@ Validates if the stream key matches the one for the specified serve.
 Very Simple :
 	install the Requirement Package then : 
 		py auth_server.py 
+		
+Also theres a Seprated version in mentioned folder that you can use it as well if you want to make it simpler for disableing and granting access to aparat rtmp push access;
 # note
 	Tested on For Windows Server 2022 
 	
+# Endpoint 
+```
+POST /auth?server=live1
+```
+* Validates a stream key for a specific server.
+```
+POST /start
+```
+* Activates the streaming loop and begins pushing via FFmpeg.
+```
+POST /stop
+```
+* Stops the active FFmpeg process and disables auto-restarts.
+
+# Customization
+Modify the VALID_KEYS dictionary to define allowed stream keys per RTMP server.
+Edit the run_ffmpeg() function to define your input and output stream URLs.
+
 #📌 Important Notes:
 
 Since Aparat may block direct streaming from some systems, it's recommended to use FFmpeg for relaying your stream.
 
 You can download a reliable FFmpeg build from the official source: https://www.gyan.dev/ffmpeg/builds/
 
-Recommended file: ffmpeg-release-essentials.zip
+Recommended file: ```ffmpeg-release-essentials.zip```
 
 After downloading and extracting the files, add the following path to your system’s Environment Variables so you can run FFmpeg from anywhere:
 
-Path: C:\ffmpeg\bin
+Path: ```C:\ffmpeg\bin```
 
-How to add:
+* How to add:
 
 Right-click on This PC, go to Properties.
 
