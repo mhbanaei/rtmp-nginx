@@ -1,4 +1,5 @@
 # RTMP Stream Manager with Flask & FFmpeg
+* Note ```This Project Also Solved the general issue with connection to rtmp of Aparat Streaming Platform```
 This project allows dynamic control of RTMP streaming using a Flask server and FFmpeg.
 You can start, stop, and authenticate incoming RTMP streams via HTTP endpoints.
 It's perfect for building a lightweight live stream redirector with basic access control.
