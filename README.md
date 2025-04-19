@@ -123,12 +123,12 @@ ffmpeg -version
 * ⚙️ RTMP Server (NGINX Example)
 
 `
-application live1 {
-    live on;
-    wait_key on;
-    on_publish      http://127.0.0.1:8000/auth?server=live1;
-    on_publish_done http://127.0.0.1:8000/stop?name=$name;
-}
+	application live1 {
+		live on;
+		wait_key on;
+		on_publish      http://127.0.0.1:8000/auth?server=live1;
+		on_publish_done http://127.0.0.1:8000/stop?name=$name;
+	}
 `
 
 # 💡 Future Improvements
