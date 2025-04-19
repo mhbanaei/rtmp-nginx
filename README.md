@@ -97,4 +97,49 @@ To verify FFmpeg is installed correctly, open a terminal or command prompt and r
 ```
 ffmpeg -version
 ```
+#  PSAAMA Instruction
+
+* NGINX RTMP server receives the stream.
+
+* On stream start `(on_publish)`, NGINX calls `/auth`:
+- Checks if the provided stream key is valid.
+- If valid, launches a separate ffmpeg process/thread to push the stream to the user’s configured output.
+* On stream stop (on_publish_done), NGINX calls /stop:
+- Terminates the ffmpeg process/thread for that key.
+
+* 🔧 Configuration
+
+`
+	VALID_KEYS = {
+		"live1": ["user1_key"],
+		"live2": ["user2_key"],
+	}
+
+	OUTPUT_URLS = {
+		"user1_key": "rtmp://aparat.com/event/YOUR_STREAM_KEY",
+		"user2_key": "rtmp://aparat.com/event/YOUR_STREAM_KEY",
+	}
+`
+* ⚙️ RTMP Server (NGINX Example)
+
+`
+application live1 {
+    live on;
+    wait_key on;
+    on_publish      http://127.0.0.1:8000/auth?server=live1;
+    on_publish_done http://127.0.0.1:8000/stop?name=$name;
+}
+`
+
+# 💡 Future Improvements
+
+* a database (e.g. SQLite, MongoDB) for managing keys and output URLs.
+
+* Add real-time dashboard for active streams.
+
+* Support multiple simultaneous outputs (multi-platform streaming).
+
+* Add web UI for users to manage their keys and outputs.
+
+
 
