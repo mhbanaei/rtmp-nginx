@@ -17,7 +17,7 @@ VALID_KEYS = {
     "live2": ["user2_key"],
 }
 OUTPUT_URLS = {
-    "user1_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YourStream_Key",
+    "user1_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YuorStream_key",
     "user2_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YourStream_Key",
 }
 # =====================================
@@ -84,12 +84,16 @@ def run_ffmpeg_monitor(server, key, stop_event):
         cmd = [
             r"C:\\ffmpeg\\bin\\ffmpeg.exe",
             "-rtmp_live", "live",
+            "-re",                          # ارسال با نرخ واقعی، نه تمام‌سرعت
             "-i", input_url,
             "-c:v", "libx264",
-            "-preset", "veryfast",
-            "-b:v", "2500k",
+            "-preset", "veryfast",          # سریع‌تر و کم‌فشارتر از medium
+            "-tune", "zerolatency",         # بهینه برای استریم زنده
+            "-b:v", "5000k",                # بیت‌ریت ویدیو کمتر (CPU کمتر)
+            "-maxrate", "4000k",            # حداکثر نرخ داده
+            "-bufsize", "8000k",            # بافر برای پایداری
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "96k",                  # صدای سبک‌تر
             "-ac", "2",
             "-ar", "44100",
             "-f", "flv",
@@ -103,14 +107,23 @@ def run_ffmpeg_monitor(server, key, stop_event):
         disconnected = False
         last_time = None
         stable_count = 0
+        last_log_time = time.time()  # زمان آخرین لاگ
 
         for line in proc.stderr:
             if stop_event.is_set():
                 break
+            line = line.strip()
+            if not line:
+                continue
+
+            # کاهش بار CPU
+            time.sleep(0.05)
+
             if "Connection refused" in line or "Server error" in line or "Immediate exit requested" in line:
-                logging.warning(f"[{server}:{key}] Disconnected or error: {line.strip()}")
+                logging.warning(f"[{server}:{key}] Disconnected or error: {line}")
                 disconnected = True
                 break
+
             if "time=" in line:
                 try:
                     time_part = line.split("time=")[1].split()[0]
@@ -120,13 +133,16 @@ def run_ffmpeg_monitor(server, key, stop_event):
                         stable_count = 0
                     last_time = time_part
                     if stable_count >= 30:
-                        logging.warning(f"[{server}:{key}] Stream frozen for 30 seconds, stopping...")
+                        logging.warning(f"[{server}:{key}] Stream frozen for 30 seconds, restarting...")
                         break
                 except Exception as e:
-                    logging.error(f"Error parsing time in line: {line.strip()} - {e}")
+                    logging.error(f"Error parsing time in line: {line} - {e}")
 
-            if "frame=" in line or "bitrate=" in line:
-                logging.info(f"[{server}:{key}][ffmpeg] {line.strip()}")
+            # فقط هر 60 ثانیه یک‌بار لاگ فریم یا بیت‌ریت
+            now = time.time()
+            if ("frame=" in line or "bitrate=" in line) and (now - last_log_time > 60):
+                logging.info(f"[{server}:{key}][ffmpeg] {line}")
+                last_log_time = now
 
         proc.terminate()
         proc.wait()
