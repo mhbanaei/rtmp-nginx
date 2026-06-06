@@ -17,7 +17,7 @@ VALID_KEYS = {
     "live2": ["user2_key"],
 }
 OUTPUT_URLS = {
-    "user1_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YuorStream_key",
+    "user1_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YourStream_Key",
     "user2_key": "rtmp://rtmp.cdn.asset.aparat.com:443/event/YourStream_Key",
 }
 # =====================================
@@ -82,20 +82,14 @@ def run_ffmpeg_monitor(server, key, stop_event):
 
     while not stop_event.is_set():
         cmd = [
-            r"C:\\ffmpeg\\bin\\ffmpeg.exe",
+            r"C:\ffmpeg\bin\ffmpeg.exe",
+
             "-rtmp_live", "live",
-            "-re",                          # ارسال با نرخ واقعی، نه تمام‌سرعت
             "-i", input_url,
-            "-c:v", "libx264",
-            "-preset", "veryfast",          # سریع‌تر و کم‌فشارتر از medium
-            "-tune", "zerolatency",         # بهینه برای استریم زنده
-            "-b:v", "5000k",                # بیت‌ریت ویدیو کمتر (CPU کمتر)
-            "-maxrate", "4000k",            # حداکثر نرخ داده
-            "-bufsize", "8000k",            # بافر برای پایداری
-            "-c:a", "aac",
-            "-b:a", "96k",                  # صدای سبک‌تر
-            "-ac", "2",
-            "-ar", "44100",
+
+            "-c:v", "copy",
+            "-c:a", "copy",
+
             "-f", "flv",
             output_url
         ]
@@ -165,3 +159,36 @@ def run_ffmpeg_monitor(server, key, stop_event):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
+
+
+        """
+        cmd = [
+            r"C:\ffmpeg\bin\ffmpeg.exe",
+
+            "-rtmp_live", "live",
+            "-i", input_url,
+
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-tune", "zerolatency",
+
+            "-pix_fmt", "yuv420p",
+            "-profile:v", "high",
+
+            "-r", "30",
+            "-g", "60",
+            "-keyint_min", "60",
+
+            "-b:v", "4500k",
+            "-maxrate", "4500k",
+            "-bufsize", "9000k",
+
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-ar", "44100",
+            "-ac", "2",
+
+            "-f", "flv",
+            output_url
+        ]
+        """
