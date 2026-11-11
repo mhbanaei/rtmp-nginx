@@ -2,7 +2,18 @@
 
 const path = require('node:path');
 const express = require('express');
-const { Store, PLATFORMS, findUser, findUserByKey, pushEvent, todayKey, maskSecret } = require('./db');
+const {
+  Store,
+  PLATFORMS,
+  ALLOWED_PLATFORMS,
+  normalizeAllowedPlatforms,
+  isPlatformAllowed,
+  findUser,
+  findUserByKey,
+  pushEvent,
+  todayKey,
+  maskSecret
+} = require('./db');
 const { verifyPassword, hashPassword, randomStreamKey } = require('./security');
 const {
   attachUser,
@@ -30,7 +41,21 @@ function wrap(handler) {
   };
 }
 
-function clientUser(user, { includeSecrets = true } = {}) {
+function clientUser(user, { includeSecrets = true, allowedOnly = false } = {}) {
+  const allowedPlatforms = normalizeAllowedPlatforms(user.allowedPlatforms, user.role);
+  const destinations = (user.destinations || [])
+    .filter((dest) => !allowedOnly || allowedPlatforms.includes(dest.platform))
+    .map((dest) => ({
+      id: dest.id,
+      platform: dest.platform,
+      label: dest.label,
+      serverUrl: dest.serverUrl,
+      streamKey: includeSecrets ? dest.streamKey : maskSecret(dest.streamKey),
+      enabled: Boolean(dest.enabled),
+      compat: Boolean(dest.compat),
+      createdAt: dest.createdAt
+    }));
+
   return {
     id: user.id,
     username: user.username,
@@ -42,24 +67,18 @@ function clientUser(user, { includeSecrets = true } = {}) {
     quotaBytes: user.quotaBytes,
     quotaBlocked: Boolean(user.quotaBlocked),
     usageBytes: user.usageBytes || 0,
+    usageDownloadBytes: user.usageDownloadBytes || 0,
+    usageUploadBytes: user.usageUploadBytes || 0,
     usageDaily: user.usageDaily || {},
     usageByPlatform: user.usageByPlatform || {},
+    allowedPlatforms,
     createdAt: user.createdAt,
     approvedAt: user.approvedAt,
     lastLoginAt: user.lastLoginAt,
     lastStreamAt: user.lastStreamAt,
     liveSince: user.liveSince,
     note: user.note || '',
-    destinations: (user.destinations || []).map((dest) => ({
-      id: dest.id,
-      platform: dest.platform,
-      label: dest.label,
-      serverUrl: dest.serverUrl,
-      streamKey: includeSecrets ? dest.streamKey : maskSecret(dest.streamKey),
-      enabled: Boolean(dest.enabled),
-      compat: Boolean(dest.compat),
-      createdAt: dest.createdAt
-    }))
+    destinations
   };
 }
 
@@ -140,7 +159,10 @@ async function startServer(options = {}) {
   const manager = new RelayManager({
     store,
     ingestUrl: (user) => `rtmp://127.0.0.1:${ingest.port}/${ingest.app}/${user.streamKey}`,
-    log: logger
+    log: logger,
+    onQuotaExceeded: (userId, sessionId) => {
+      if (sessionId) ingest?.kick(sessionId);
+    }
   });
 
   const authorize = (streamKey) => {
@@ -157,9 +179,9 @@ async function startServer(options = {}) {
     app: process.env.RTMP_APP || 'live',
     logger,
     authorize,
-    published: (streamKey, sessionId) => {
+    published: (streamKey, sessionId, session) => {
       const user = findUserByKey(store.read(), streamKey);
-      if (user) manager.onPublish(user, sessionId);
+      if (user) manager.onPublish(user, sessionId, session);
     },
     unpublished: (streamKey) => manager.onUnpublishByKey(streamKey)
   });
@@ -226,7 +248,7 @@ async function startServer(options = {}) {
   app.get('/api/me', (req, res) => {
     if (!req.user) return res.json({ user: null, ingest: ingestInfo(req, req.db, ingest) });
     return res.json({
-      user: clientUser(req.user),
+      user: clientUser(req.user, { allowedOnly: true }),
       ingest: ingestInfo(req, req.db, ingest),
       live: manager.isLive(req.user.id)
     });
@@ -266,8 +288,11 @@ async function startServer(options = {}) {
       streamKey: randomStreamKey(),
       quotaBytes: null,
       usageBytes: 0,
+      usageDownloadBytes: 0,
+      usageUploadBytes: 0,
       usageDaily: {},
       usageByPlatform: {},
+      allowedPlatforms: normalizeAllowedPlatforms([], 'user'),
       destinations: require('./db').makeDefaultDestinations(),
       createdAt: new Date().toISOString(),
       approvedAt: null,
@@ -358,14 +383,15 @@ async function startServer(options = {}) {
     if (!user) return res.status(401).json({ error: 'حساب پیدا نشد.' });
     const info = ingestInfo(req, req.db, ingest);
 
+    const allowedPlatforms = normalizeAllowedPlatforms(user.allowedPlatforms, user.role);
     return res.json({
-      user: clientUser(user),
+      user: clientUser(user, { allowedOnly: true }),
       ingest: info,
       live: manager.isLive(user.id),
       relays: manager.userSnapshot(user.id),
       events: (req.db.events || []).filter((e) => e.userId === user.id).slice(0, 24),
       series: usageSeries(user),
-      platforms: PLATFORMS,
+      platforms: Object.fromEntries(Object.entries(PLATFORMS).filter(([platform]) => allowedPlatforms.includes(platform))),
       quota: {
         bytes: user.quotaBytes,
         used: user.usageBytes || 0,
@@ -397,6 +423,9 @@ async function startServer(options = {}) {
     const body = req.body || {};
     const dest = (req.user.destinations || []).find((d) => d.id === req.params.id);
     if (!dest) return res.status(404).json({ error: 'مقصد پیدا نشد.' });
+    if (!isPlatformAllowed(req.user, dest.platform)) {
+      return res.status(403).json({ error: 'دسترسی این مقصد توسط مدیر برای شما فعال نشده است.' });
+    }
 
     const nextServer = body.serverUrl === undefined ? dest.serverUrl : sanitizeText(body.serverUrl, 500);
     const nextKey = body.streamKey === undefined ? dest.streamKey : sanitizeText(body.streamKey, 500);
@@ -415,6 +444,9 @@ async function startServer(options = {}) {
   app.post('/api/destinations/:id/toggle', requireAuth, wrap((req, res) => {
     const dest = (req.user.destinations || []).find((d) => d.id === req.params.id);
     if (!dest) return res.status(404).json({ error: 'مقصد پیدا نشد.' });
+    if (!isPlatformAllowed(req.user, dest.platform)) {
+      return res.status(403).json({ error: 'دسترسی این مقصد توسط مدیر برای شما فعال نشده است.' });
+    }
     const enabled = Boolean((req.body || {}).enabled);
 
     if (enabled) {
@@ -440,6 +472,9 @@ async function startServer(options = {}) {
   }));
 
   app.post('/api/destinations', requireAuth, wrap((req, res) => {
+    if (!isPlatformAllowed(req.user, 'custom')) {
+      return res.status(403).json({ error: 'افزودن مقصد RTMP دلخواه توسط مدیر برای شما فعال نشده است.' });
+    }
     const body = req.body || {};
     const label = sanitizeText(body.label, 40);
     const serverUrl = sanitizeText(body.serverUrl, 500);
@@ -488,7 +523,9 @@ async function startServer(options = {}) {
         displayName: user.displayName,
         createdAt: user.createdAt,
         live: manager.isLive(user.id),
-        platforms: (user.destinations || []).filter((d) => d.enabled).map((d) => d.platform),
+        platforms: (user.destinations || [])
+          .filter((d) => d.enabled && isPlatformAllowed(user, d.platform))
+          .map((d) => d.platform),
         streamCount: user.lastStreamAt ? 1 : 0
       }
     });
@@ -508,6 +545,9 @@ async function startServer(options = {}) {
         role: u.role,
         status: u.status,
         usageBytes: u.usageBytes || 0,
+        usageDownloadBytes: u.usageDownloadBytes || 0,
+        usageUploadBytes: u.usageUploadBytes || 0,
+        allowedPlatforms: normalizeAllowedPlatforms(u.allowedPlatforms, u.role),
         quotaBytes: u.quotaBytes,
         quotaBlocked: Boolean(u.quotaBlocked),
         createdAt: u.createdAt,
@@ -575,7 +615,9 @@ async function startServer(options = {}) {
     }
     if (status === 'rejected') {
       user.rejectedAt = new Date().toISOString();
+      const sessionId = manager.liveSession(user.id);
       manager.stopUser(user.id, 'rejected');
+      if (sessionId) ingest.kick(sessionId);
     }
     pushEvent(db, {
       type: 'user',
@@ -591,6 +633,33 @@ async function startServer(options = {}) {
     store.write(db);
     if (status === 'approved') manager.syncUser(user.id);
     return res.json({ ok: true });
+  }));
+
+  app.post('/api/admin/users/:id/platforms', requireAdmin, wrap((req, res) => {
+    const body = req.body || {};
+    if (!Array.isArray(body.platforms)) {
+      return res.status(400).json({ error: 'فهرست دسترسی‌ها معتبر نیست.' });
+    }
+    if (body.platforms.some((platform) => !ALLOWED_PLATFORMS.includes(platform))) {
+      return res.status(400).json({ error: 'پلتفرم انتخاب‌شده معتبر نیست.' });
+    }
+    const db = req.db;
+    const user = db.users.find((u) => u.id === req.params.id);
+    if (!user) return res.status(404).json({ error: 'کاربر پیدا نشد.' });
+
+    user.allowedPlatforms = normalizeAllowedPlatforms(body.platforms, user.role);
+    for (const dest of user.destinations || []) {
+      if (!user.allowedPlatforms.includes(dest.platform)) dest.enabled = false;
+    }
+    pushEvent(db, {
+      type: 'access',
+      userId: user.id,
+      username: user.username,
+      message: `دسترسی پلتفرم‌ها به‌روزرسانی شد: ${user.allowedPlatforms.join(', ')}`
+    });
+    store.write(db);
+    manager.syncUser(user.id);
+    return res.json({ ok: true, allowedPlatforms: user.allowedPlatforms });
   }));
 
   app.post('/api/admin/users/:id/quota', requireAdmin, wrap((req, res) => {
@@ -613,6 +682,8 @@ async function startServer(options = {}) {
     }
     if (body.resetUsage) {
       user.usageBytes = 0;
+      user.usageDownloadBytes = 0;
+      user.usageUploadBytes = 0;
       user.usageDaily = {};
       user.usageByPlatform = {};
     }
@@ -678,7 +749,9 @@ async function startServer(options = {}) {
     const db = req.db;
     const user = db.users.find((u) => u.id === req.params.id);
     if (!user) return res.status(404).json({ error: 'کاربر پیدا نشد.' });
+    const sessionId = manager.liveSession(user.id);
     manager.adminStop(user.id);
+    if (sessionId) ingest.kick(sessionId);
     pushEvent(db, {
       type: 'stream',
       userId: user.id,

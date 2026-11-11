@@ -33,6 +33,25 @@ const PLATFORMS = {
   }
 };
 
+const DEFAULT_ALLOWED_PLATFORMS = ['restream'];
+const ALLOWED_PLATFORMS = [...Object.keys(PLATFORMS), 'custom'];
+
+function normalizeAllowedPlatforms(value, role = 'user') {
+  const fallback = role === 'admin' ? ALLOWED_PLATFORMS.slice() : DEFAULT_ALLOWED_PLATFORMS.slice();
+  const source = Array.isArray(value) ? value : fallback;
+  const platforms = [];
+  for (const platform of source) {
+    if (!ALLOWED_PLATFORMS.includes(platform) || platforms.includes(platform)) continue;
+    platforms.push(platform);
+  }
+  if (!platforms.includes('restream')) platforms.unshift('restream');
+  return platforms;
+}
+
+function isPlatformAllowed(user, platform) {
+  return normalizeAllowedPlatforms(user && user.allowedPlatforms, user && user.role).includes(platform);
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -71,8 +90,11 @@ function makeUser({ username, displayName, password, role = 'user', status = 'pe
     streamKey: randomStreamKey(),
     quotaBytes: null,
     usageBytes: 0,
+    usageDownloadBytes: 0,
+    usageUploadBytes: 0,
     usageDaily: {},
     usageByPlatform: {},
+    allowedPlatforms: role === 'admin' ? ALLOWED_PLATFORMS.slice() : DEFAULT_ALLOWED_PLATFORMS.slice(),
     destinations: makeDefaultDestinations(),
     createdAt: stamp,
     approvedAt: status === 'approved' ? stamp : null,
@@ -135,8 +157,11 @@ function hydrate(db) {
     user.role = user.role === 'admin' ? 'admin' : 'user';
     user.status = ['pending', 'approved', 'rejected'].includes(user.status) ? user.status : 'pending';
     user.usageBytes = Number(user.usageBytes) || 0;
+    user.usageDownloadBytes = Number(user.usageDownloadBytes) || 0;
+    user.usageUploadBytes = Number(user.usageUploadBytes) || 0;
     user.usageDaily = user.usageDaily && typeof user.usageDaily === 'object' ? user.usageDaily : {};
     user.usageByPlatform = user.usageByPlatform && typeof user.usageByPlatform === 'object' ? user.usageByPlatform : {};
+    user.allowedPlatforms = normalizeAllowedPlatforms(user.allowedPlatforms, user.role);
     user.destinations = Array.isArray(user.destinations) ? user.destinations : [];
     user.quotaBytes = user.quotaBytes === null || user.quotaBytes === undefined ? null : Number(user.quotaBytes);
     user.quotaBlocked = Boolean(user.quotaBlocked);
@@ -150,6 +175,7 @@ function hydrate(db) {
       dest.enabled = Boolean(dest.enabled);
       dest.compat = Boolean(dest.compat);
       dest.createdAt = dest.createdAt || nowIso();
+      if (!user.allowedPlatforms.includes(dest.platform)) dest.enabled = false;
     }
   }
   return db;
@@ -271,6 +297,10 @@ class Store {
 
 module.exports = {
   PLATFORMS,
+  ALLOWED_PLATFORMS,
+  DEFAULT_ALLOWED_PLATFORMS,
+  normalizeAllowedPlatforms,
+  isPlatformAllowed,
   Store,
   hydrate,
   makeUser,

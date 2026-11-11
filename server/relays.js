@@ -2,7 +2,7 @@
 
 const { spawn } = require('node:child_process');
 const path = require('node:path');
-const { pushEvent, todayKey } = require('./db');
+const { pushEvent, todayKey, isPlatformAllowed } = require('./db');
 
 const FLUSH_MS = 2000;
 const RESTART_BASE_MS = 3000;
@@ -77,12 +77,14 @@ function killTree(child) {
 }
 
 class RelayManager {
-  constructor({ store, ingestUrl, log = console.log }) {
+  constructor({ store, ingestUrl, log = console.log, onQuotaExceeded }) {
     this.store = store;
     this.ingestUrl = ingestUrl;
     this.log = log;
+    this.onQuotaExceeded = onQuotaExceeded;
     this.jobs = new Map();
     this.live = new Map();
+    this.ingestSessions = new Map();
     this.suppressed = new Set();
     this.timer = setInterval(() => this.flush(), FLUSH_MS);
     this.timer.unref?.();
@@ -100,12 +102,13 @@ class RelayManager {
     return this.live.get(userId)?.sessionId || null;
   }
 
-  onPublish(user, sessionId) {
+  onPublish(user, sessionId, session) {
     this.live.set(user.id, {
       streamKey: user.streamKey,
       sessionId,
       startedAt: new Date().toISOString()
     });
+    this.trackIngest(user.id, sessionId, session);
     this.suppressed.delete(user.id);
     this.log(`[ingest] ${user.username} is publishing`);
     this.store.mutate((db) => {
@@ -127,6 +130,9 @@ class RelayManager {
   onUnpublishByKey(streamKey) {
     for (const [userId, info] of Array.from(this.live.entries())) {
       if (info.streamKey !== streamKey) continue;
+      this.captureIngest(userId);
+      this.flush();
+      this.ingestSessions.delete(userId);
       this.live.delete(userId);
       const user = this.user(userId);
       this.store.mutate((db) => {
@@ -161,7 +167,7 @@ class RelayManager {
     for (const dest of user.destinations || []) {
       keepIds.add(dest.id);
       const target = destinationUrl(dest);
-      const desired = allowed && dest.enabled && Boolean(target);
+      const desired = allowed && dest.enabled && isPlatformAllowed(user, dest.platform) && Boolean(target);
       const job = this.jobs.get(dest.id);
 
       if (!desired) {
@@ -231,6 +237,7 @@ class RelayManager {
       !this.suppressed.has(user.id) &&
       dest &&
       dest.enabled &&
+      isPlatformAllowed(user, dest.platform) &&
       Boolean(target);
 
     if (!allowed) {
@@ -384,6 +391,30 @@ class RelayManager {
     if (job.status === 'starting') job.status = 'running';
   }
 
+  trackIngest(userId, sessionId, session) {
+    const socket = session && session.socket;
+    if (!socket) return;
+    const bytesRead = Number(socket.bytesRead);
+    if (!Number.isFinite(bytesRead)) return;
+    this.ingestSessions.set(userId, {
+      sessionId,
+      socket,
+      lastBytes: bytesRead,
+      pendingBytes: 0
+    });
+  }
+
+  captureIngest(userId) {
+    const entry = this.ingestSessions.get(userId);
+    if (!entry) return 0;
+    const current = Number(entry.socket && entry.socket.bytesRead);
+    let delta = Number.isFinite(current) ? current - entry.lastBytes : 0;
+    if (delta < 0) delta = 0;
+    if (Number.isFinite(current)) entry.lastBytes = current;
+    entry.pendingBytes += delta;
+    return delta;
+  }
+
   onExit(job, child, code, signal) {
     if (job.proc !== child) return;
     job.proc = null;
@@ -422,7 +453,7 @@ class RelayManager {
     if (!user || !this.live.has(user.id) || user.status !== 'approved' || user.quotaBlocked) return false;
     if (this.suppressed.has(user.id)) return false;
     const dest = (user.destinations || []).find((d) => d.id === job.destId);
-    return Boolean(dest && dest.enabled && destinationUrl(dest));
+    return Boolean(dest && dest.enabled && isPlatformAllowed(user, dest.platform) && destinationUrl(dest));
   }
 
   stopJob(job) {
@@ -520,19 +551,31 @@ class RelayManager {
   }
 
   flush() {
-    if (!this.jobs.size) return;
+    for (const userId of this.ingestSessions.keys()) this.captureIngest(userId);
 
     const perUser = new Map();
     for (const job of this.jobs.values()) {
       if (job.pendingBytes <= 0) continue;
       let entry = perUser.get(job.userId);
       if (!entry) {
-        entry = { total: 0, platforms: {} };
+        entry = { total: 0, download: 0, upload: 0, platforms: {} };
         perUser.set(job.userId, entry);
       }
-      entry.total += job.pendingBytes;
+      entry.upload += job.pendingBytes;
       entry.platforms[job.platform] = (entry.platforms[job.platform] || 0) + job.pendingBytes;
     }
+
+    for (const [userId, ingest] of this.ingestSessions) {
+      if (ingest.pendingBytes <= 0) continue;
+      let entry = perUser.get(userId);
+      if (!entry) {
+        entry = { total: 0, download: 0, upload: 0, platforms: {} };
+        perUser.set(userId, entry);
+      }
+      entry.download += ingest.pendingBytes;
+    }
+
+    for (const entry of perUser.values()) entry.total = entry.download + entry.upload;
     if (!perUser.size) return;
 
     const db = this.store.read();
@@ -543,6 +586,8 @@ class RelayManager {
       const user = db.users.find((u) => u.id === userId);
       if (!user) continue;
       user.usageBytes = (Number(user.usageBytes) || 0) + entry.total;
+      user.usageDownloadBytes = (Number(user.usageDownloadBytes) || 0) + entry.download;
+      user.usageUploadBytes = (Number(user.usageUploadBytes) || 0) + entry.upload;
       user.usageDaily = user.usageDaily || {};
       user.usageDaily[today] = (Number(user.usageDaily[today]) || 0) + entry.total;
       user.usageByPlatform = user.usageByPlatform || {};
@@ -576,10 +621,13 @@ class RelayManager {
 
     this.store.write(db);
     for (const job of this.jobs.values()) job.pendingBytes = 0;
+    for (const ingest of this.ingestSessions.values()) ingest.pendingBytes = 0;
 
     for (const userId of exceeded) {
+      const sessionId = this.live.get(userId)?.sessionId || null;
       this.log(`[quota] user ${userId} hit the usage limit`);
       this.stopUser(userId, 'quota');
+      this.onQuotaExceeded?.(userId, sessionId);
     }
   }
 

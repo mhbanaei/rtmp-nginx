@@ -35,6 +35,15 @@ const VIEW_TITLES = {
   settings: ['تنظیمات', 'پیکربندی دامنه و سرور دریافت']
 };
 
+const ACCESS_PLATFORMS = [
+  { key: 'restream', label: 'Restream', locked: true },
+  { key: 'aparat', label: 'Aparat' },
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'twitch', label: 'Twitch' },
+  { key: 'kick', label: 'Kick' },
+  { key: 'custom', label: 'RTMP دلخواه' }
+];
+
 function setText(id, value) {
   const node = $(id);
   if (node) node.textContent = value;
@@ -274,6 +283,7 @@ function renderUserDialog(detail) {
   const usagePct = quotaPercent(user.usageBytes, user.quotaBytes);
   const quotaValue = user.quotaBytes === null || user.quotaBytes === undefined ? '' : (user.quotaBytes / 1e9).toFixed(2);
   const profileLink = `${window.location.origin}/u/${user.username}`;
+  const allowedPlatforms = user.allowedPlatforms || ['restream'];
 
   const destinations = (user.destinations || [])
     .map((dest) => {
@@ -327,7 +337,23 @@ function renderUserDialog(detail) {
       <div class="info"><span>آخرین پخش</span><b>${esc(user.lastStreamAt ? timeAgo(user.lastStreamAt) : '—')}</b></div>
       <div class="info"><span>مدت پخش فعلی</span><b>${detail.live && user.liveSince ? esc(duration(Date.now() - new Date(user.liveSince).getTime())) : '—'}</b></div>
       <div class="info"><span>حجم مصرفی</span><b>${esc(fmtBytes(user.usageBytes))}</b></div>
+      <div class="info"><span>دانلود از OBS</span><b>${esc(fmtBytes(user.usageDownloadBytes))}</b></div>
+      <div class="info"><span>آپلود به مقصدها</span><b>${esc(fmtBytes(user.usageUploadBytes))}</b></div>
       <div class="info"><span>سهمیه</span><b>${user.quotaBytes === null ? 'نامحدود' : esc(fmtBytes(user.quotaBytes))}</b></div>
+    </div>
+
+    <div class="modal-section">
+      <h3>دسترسی پلتفرم‌ها</h3>
+      <p class="dest-hint" style="margin-bottom:10px">Restream برای همه فعال است. برای نمایش و استفاده از بقیه مقصدها، گزینه موردنظر را تیک بزنید.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:12px">
+        ${ACCESS_PLATFORMS.map(
+          (item) => `<label class="checkbox">
+            <input type="checkbox" data-platform-access value="${esc(item.key)}" ${allowedPlatforms.includes(item.key) ? 'checked' : ''} ${item.locked ? 'disabled' : ''} />
+            <span>${esc(item.label)}</span>
+          </label>`
+        ).join('')}
+      </div>
+      <button class="btn btn-sm btn-primary" type="button" data-save-platforms>ذخیره دسترسی‌ها</button>
     </div>
 
     <div class="modal-section">
@@ -379,7 +405,7 @@ function renderUserDialog(detail) {
     </div>
 
     <div class="modal-section">
-      <h3>مصرف به تفکیک پلتفرم</h3>
+      <h3>مصرف آپلود به تفکیک پلتفرم</h3>
       <div class="info-grid">${byPlatform || '<div class="info"><span>—</span><b>هنوز مصرفی ثبت نشده</b></div>'}</div>
     </div>
 
@@ -461,6 +487,20 @@ document.addEventListener('click', async (event) => {
   if (stop) {
     if (!window.confirm('پخش این کاربر قطع شود؟')) return;
     await act(stop.dataset.stopUser, `/api/admin/users/${stop.dataset.stopUser}/stop`, {}, 'پخش کاربر قطع شد.');
+    return;
+  }
+
+  const savePlatforms = event.target.closest('[data-save-platforms]');
+  if (savePlatforms && state.detailUserId) {
+    const platforms = Array.from($('userDialogBody').querySelectorAll('[data-platform-access]'))
+      .filter((input) => input.checked)
+      .map((input) => input.value);
+    await act(
+      state.detailUserId,
+      `/api/admin/users/${state.detailUserId}/platforms`,
+      { platforms },
+      'دسترسی پلتفرم‌ها ذخیره شد.'
+    );
     return;
   }
 

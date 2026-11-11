@@ -178,10 +178,11 @@ if not errorlevel 1 (
   exit /b 1
 )
 
-echo Starting server: http://127.0.0.1:9998
-echo Press Ctrl+C to stop the server.
+echo Starting server in THIS window: http://127.0.0.1:9998
+echo Server logs stay visible here. Press Ctrl+C to stop.
+echo Do not close this window while streaming.
 echo.
-start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:9998'"
+start "" "http://127.0.0.1:9998"
 "%NODE_EXE%" server\index.js
 pause
 exit /b 0

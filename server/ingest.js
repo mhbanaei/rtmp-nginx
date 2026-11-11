@@ -76,7 +76,7 @@ class IngestServer {
     nms.on('postPublish', (id, streamPath) => {
       const key = String(streamPath || '').split('/').filter(Boolean).pop() || '';
       try {
-        this.published(key, id);
+        this.published(key, id, nms.getSession(id));
       } catch (err) {
         this.logger(`[ingest] postPublish handler failed: ${err.message}`);
       }

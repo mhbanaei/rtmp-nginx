@@ -176,6 +176,8 @@ function renderQuota(data) {
     else ring.style.stroke = '';
   }
   setText('quotaUsed', fmtBytes(used));
+  setText('usageDownload', fmtBytes(data.user.usageDownloadBytes));
+  setText('usageUpload', fmtBytes(data.user.usageUploadBytes));
 }
 
 function renderCredentials(data) {
@@ -259,9 +261,16 @@ function destCard(dest, data) {
   </article>`;
 }
 
+function allowedDestinations(data) {
+  const allowed = new Set(data.user.allowedPlatforms || ['restream']);
+  return (data.user.destinations || []).filter((dest) => allowed.has(dest.platform));
+}
+
 function renderDestinations(data, force = false) {
-  const sig = JSON.stringify(
-    (data.user.destinations || []).map((d) => ({
+  const destinations = allowedDestinations(data);
+  const sig = JSON.stringify({
+    allowed: data.user.allowedPlatforms || ['restream'],
+    destinations: destinations.map((d) => ({
       id: d.id,
       label: d.label,
       serverUrl: d.serverUrl,
@@ -269,16 +278,16 @@ function renderDestinations(data, force = false) {
       enabled: d.enabled,
       compat: d.compat
     }))
-  );
+  });
   if (!force && (state.editing || sig === state.destSig)) return;
   state.destSig = sig;
-  $('destGrid').innerHTML = (data.user.destinations || []).map((dest) => destCard(dest, data)).join('');
+  $('destGrid').innerHTML = destinations.map((dest) => destCard(dest, data)).join('');
   updateDestinationStatus(data);
 }
 
 function updateDestinationStatus(data) {
   const byId = new Map((data.relays || []).map((r) => [r.destId, r]));
-  for (const dest of data.user.destinations || []) {
+  for (const dest of allowedDestinations(data)) {
     const node = document.querySelector(`[data-status-for="${dest.id}"]`);
     if (!node) continue;
     const relay = byId.get(dest.id);
@@ -339,6 +348,7 @@ function renderEvents(data) {
 }
 
 function render(data) {
+  $('addCustom').classList.toggle('hidden', !(data.user.allowedPlatforms || []).includes('custom'));
   renderHeader(data);
   renderBanners(data);
   renderStatus(data);
