@@ -1,145 +1,215 @@
-# RTMP Stream Manager with Flask & FFmpeg
-* Note ```This Project Also Solved the general issue with connection to rtmp of Aparat Streaming Platform```
-This project allows dynamic control of RTMP streaming using a Flask server and FFmpeg.
-You can start, stop, and authenticate incoming RTMP streams via HTTP endpoints.
-It's perfect for building a lightweight live stream redirector with basic access control.
-# ✅ Features	
-* Secure RTMP Authentication (based on custom stream keys)
-* Start/Stop streaming dynamically using HTTP endpoints
-* Auto-retry with error handling for stream stability
-* Multi-threaded design using Python and Flask
-* Built-in FFmpeg integration for RTMP pulling and pushing
+# Restream 42
 
-# Requirements
-* Python 3.7+
-* FFmpeg (installed and accessible visa path)
-* Flask (on python)
+پنل پخش همزمان (Restream) با رابط فارسی، تأیید کاربر توسط مدیر، سهمیه حجم مصرفی و کنترل لحظه‌ای هر مقصد.
+نسخه جدید سرور RTMP داخلی خودش را دارد و به nginx یا اسکریپت‌های قدیمی نیاز ندارد.
 
-# rtmp-nginx
-Also Works with Aparat Platform
-Pushing RTMP data as Restreaming Service 
+## امکانات
 
-Requirement Package:
+- ثبت‌نام و ورود کاربر با لینک اختصاصی `http://SERVER:9998/u/USERNAME`
+- تأیید / رد حساب توسط مدیر از داخل پنل وب
+- پخش همزمان به **YouTube، Twitch، Kick، Restream.io و Aparat** به‌همراه مقصد **RTMP دلخواه**
+- روشن/خاموش کردن هر مقصد به‌صورت لحظه‌ای، بدون قطع بقیه مقصدها
+- اندازه‌گیری واقعی حجم ارسال‌شده به هر مقصد و اعمال سهمیه
+- نمایش حجم مصرفی به کاربر و مدیر (کل، روزانه، به تفکیک پلتفرم)
+- پنل مدیر: همه کاربران، کلیدها، مقصدها، اتصال‌های زنده، تنظیم سهمیه و قطع پخش
+- دستورات مدیریتی از کنسول سرور: `set admin` و `remove admin`
+- اجرای ویندوزی با `start.bat`؛ پیش‌نیازها در اولین اجرا خودکار نصب می‌شوند
+- پورت وب: **9998**
 
-	Microsoft.Visual.C.All.Package
-	nginx 1.7.11.3 Gryphon
-	http://nginx-win.ecsds.eu/download/
+## پیش‌نیازها
 
-Requirement For auth_server.py
-	pip install flask
+| نیاز | توضیح |
+| --- | --- |
+| Node.js | نسخه ۲۰ یا جدیدتر؛ `start.bat` در صورت نبود خودکار نصب می‌کند |
+| FFmpeg | برای رله مقصدها؛ `start.bat` در صورت نبود خودکار نصب می‌کند |
+| Python 3 | فقط برای پوش آپارات؛ `start.bat` در صورت نبود خودکار نصب می‌کند |
+| اینترنت | فقط برای اولین نصب پیش‌نیازها و `npm install` |
+| پورت‌ها | `9998` برای وب و `1935` برای دریافت RTMP |
 
-# Stream Key Validation API
-A Flask-based APi to validate stream keys for different servers 
+نصب و اجرا روی ویندوز:
 
-# How It Works 
-* Streamers push to your RTMP server (e.g., SRS or NGINX-RTMP).
-* The /auth endpoint validates the stream key.
-* When you POST to /start, the server starts an FFmpeg process to pull the stream and restream it to your desired output.
-* POST to /stop to terminate the FFmpeg process cleanly.
-* If the stream crashes or fails, the system will retry up to 3 times before disabling itself until manually re-enabled via /start.
-
-# Example 
-	Request : POST /auth?server=live1 with name=key1_live1
-	Response : 200 OK for valid Key, 403 Forbidden for invalid key.
-	
-# Running 
-
-Very Simple :
-	install the Requirement Package then : 
-		py auth_server.py 
-		
-Also theres a Seprated version in mentioned folder that you can use it as well if you want to make it simpler for disableing and granting access to aparat rtmp push access;
-# note
-	Tested on For Windows Server 2022 
-	
-# Endpoint 
+```bat
+start.bat
 ```
-POST /auth?server=live1
+
+این فایل Node.js، FFmpeg و Python را (در صورت نبود) داخل پوشه `.runtime` دانلود می‌کند، وابستگی‌های Node را نصب می‌کند و سرور را روی `http://localhost:9998` بالا می‌آورد. نیازی به نصب دستی چیزی نیست. برای اجرای دستی روی لینوکس:
+
+```bash
+npm install --omit=dev
+npm start
 ```
-* Validates a stream key for a specific server.
+
+سپس `http://localhost:9998` را باز کنید.
+در اولین اجرا حساب مدیر ساخته می‌شود و نام کاربری/رمز آن در کنسول و در فایل `data/initial-admin.txt` ذخیره می‌شود. این فایل را بعد از ذخیره رمز پاک کنید.
+
+## جریان کار
+
+1. کاربر در صفحه اصلی ثبت‌نام می‌کند؛ وضعیت حساب `pending` است. در این وضعیت می‌تواند وارد شود، مقصدها و کلیدهای پخش را ذخیره کند و مقصدهای موردنظرش را روشن/خاموش کند، اما اتصال OBS/RTMP او تا تأیید مدیر رد می‌شود و هیچ رله‌ای اجرا نمی‌شود؛ بنابراین حجم سرور مصرف نمی‌شود.
+2. مدیر در `/admin` حساب را تأیید می‌کند (یا با CLI).
+3. کاربر در داشبورد، آدرس دریافت و Stream Key خودش را می‌بیند:
+
+   ```text
+   Server:     rtmp://SERVER:1935/live
+   Stream Key: r42_xxxxxxxxxxxxxxxxx
+   ```
+
+4. کاربر کلید هر پلتفرم را در کارت همان مقصد ذخیره می‌کند.
+5. با اتصال OBS به سرور، مقصدهای روشن خودکار وصل می‌شوند؛ هر مقصد را می‌توان همان لحظه خاموش/روشن کرد.
+6. مصرف هر مقصد اندازه‌گیری می‌شود. با رسیدن به سهمیه، همه رله‌های کاربر متوقف می‌شوند.
+
+> کنترل دسترسی در دو لایه اعمال می‌شود: APIهای تنظیمات فقط ورود می‌خواهند تا کاربر تأییدنشده هم بتواند همه‌چیز را از قبل آماده کند، اما احراز اتصال RTMP و اجرای رله فقط برای حساب `approved` مجاز است. اتصال کاربر `pending` با خطای `account is not approved` بسته می‌شود.
+
+> اگر پورت 1935 اشغال باشد، سرور پورت آزاد بعدی (1936 به بعد) را انتخاب می‌کند و در داشبورد هشدار می‌دهد. برای پورت ثابت، سرویس اشغال‌کننده را متوقف کنید یا `RTMP_PORT` را تنظیم کنید.
+
+## ساختار مقصدها
+
+| پلتفرم | آدرس پیش‌فرض | ورودی لازم |
+| --- | --- | --- |
+| YouTube | `rtmp://a.rtmp.youtube.com/live2` | Stream key |
+| Twitch | `rtmp://live.twitch.tv/app` | Primary stream key |
+| Kick | `rtmps://fa723fc1b171.global-contribute.live-video.net/app` | Stream key |
+| Restream | `rtmp://live.restream.io/live` | RTMP key |
+| Aparat | کلید پخش (یا لینک کامل Push) | `rtmp://rtmp.cdn.asset.aparat.com:443/event/<stream-key>` |
+| Custom | هر آدرس RTMP/RTMPS | آدرس + کلید |
+
+### چرا آپارات جداگانه است؟
+
+آپارات آدرس سرور ثابت `rtmp://rtmp.cdn.asset.aparat.com:443/event` و یک **کلید پخش** دارد و لینک نهایی از کنار هم گذاشتن این دو ساخته می‌شود؛ اگر پنل آپارات لینک کامل Push داد، همان لینک هم در فیلد کلید پذیرفته می‌شود. اتصال آپارات ناپایدارتر است، به همین دلیل پوش آن در `aparat_push.py` انجام می‌شود:
+
+- FFmpeg را با فلگ‌های مخصوص آپارات اجرا می‌کند.
+- هر ۳۰ ثانیه نبود پیشرفت رسانه را تشخیص می‌دهد و اتصال را دوباره برقرار می‌کند.
+- حجم ارسال‌شده را به‌صورت `USAGE` به سرور گزارش می‌دهد.
+- با بستن مقصد یا توقف پخش، پروسه فرزند هم متوقف می‌شود.
+
+فایل‌های قدیمی nginx و اسکریپت‌های Flask حذف شده‌اند و در مسیر جدید استفاده نمی‌شوند.
+
+## دستورات کنسول (CLI)
+
+### اجرا با `start.bat`
+
+روی ویندوز `start.bat` را اجرا کنید؛ پیش‌نیازها را نصب می‌کند و سرور را در همان پنجره بالا می‌آورد. تا وقتی این پنجره باز است سرور روشن می‌ماند؛ برای توقف `Ctrl+C` بزنید یا پنجره را ببندید.
+
+برای اجرای دستورات مدیریتی، یک پنجره Command Prompt دیگر در پوشه پروژه باز کنید و دستور `node cli.js ...` را اجرا کنید. اگر سرور از قبل روشن باشد، `start.bat` هشدار می‌دهد که پورت `9998` اشغال است؛ ابتدا پنجره سرور قبلی را ببندید.
+
+### دستور تک‌مرحله‌ای
+
+روی سرور، در پوشه پروژه:
+
+```bash
+node cli.js list
+node cli.js pending
+node cli.js approve <username>
+node cli.js reject <username>
+
+# دقیقاً مطابق درخواست:
+node cli.js set admin <username>
+node cli.js remove admin <username>
+
+node cli.js quota <username> <GB|unlimited>
+node cli.js resetusage <username>
+node cli.js key <username>
+node cli.js passwd <username> [new-password]
 ```
-POST /start
+
+مثال:
+
+```bash
+node cli.js set admin hossein
+node cli.js remove admin hossein
+node cli.js quota hossein 50
 ```
-* Activates the streaming loop and begins pushing via FFmpeg.
+
+`set admin` کاربر را در صورت نیاز تأیید می‌کند. آخرین مدیر سامانه قابل حذف نیست.
+تغییرات CLI حتی وقتی سرور در حال اجراست اعمال می‌شود (داده‌ها از فایل با تشخیص تغییر زمان خوانده می‌شوند).
+
+## پنل مدیر
+
+مدیرها علاوه بر پنل مدیریت، پنل کاربری کامل خودشان را هم دارند: از داخل `/admin` روی **داشبورد کاربری** در نوار کناری یا بالای صفحه بزنید تا به `/app` بروید و مقصدها، کلید پخش، لینک اختصاصی و حجم مصرفی خودتان را ببینید. از همان پنل کاربری هم لینک **پنل مدیر** نمایش داده می‌شود.
+
+از `/admin`:
+
+- آمار کلی: کاربران، در انتظار تأیید، پخش‌های زنده، حجم کل و مصرف امروز
+- جدول کاربران با جستجو و فیلتر وضعیت
+- مدیریت هر کاربر: تأیید/رد، نقش مدیر، سهمیه (گیگابایت یا نامحدود)، صفر کردن مصرف
+- مشاهده کلید پخش، لینک شخصی، همه مقصدها و کلیدهای آن‌ها
+- قطع پخش، ساخت کلید جدید و حذف حساب
+- فهرست اتصال‌های RTMP با نرخ لحظه‌ای، حجم نشست و میزبان مقصد
+- تنظیم دامنه عمومی برای ساخت آدرس RTMP کاربران
+- رویدادهای سامانه
+
+سهمیه بر حسب **گیگابایت دهدهی** (۱ GB = 1,000,000,000 بایت) است. خالی گذاشتن یعنی نامحدود. پس از پایان سهمیه، پخش متوقف و قفل می‌شود تا مدیر سهمیه را افزایش دهد یا مصرف را صفر کند.
+
+## پیکربندی
+
+| متغیر محیطی | پیش‌فرض | کاربرد |
+| --- | --- | --- |
+| `PORT` | `9998` | پورت وب |
+| `RTMP_PORT` | `1935` | پورت دریافت RTMP (در صورت اشغال، پورت بعدی) |
+| `RTMP_APP` | `live` | نام اپلیکیشن RTMP |
+| `RESTREAM_DATA` | `./data` | مسیر فایل داده و نشست‌ها |
+| `FFMPEG_PATH` | `ffmpeg` | مسیر FFmpeg |
+| `PYTHON_PATH` | `python` | مسیر Python برای پوش آپارات |
+| `RESTREAM_ADMIN_USER` | `admin` | نام مدیر اولیه |
+| `RESTREAM_ADMIN_PASSWORD` | تصادفی | رمز مدیر اولیه |
+
+دامنه عمومی را می‌توان از `/admin` → تنظیمات تنظیم کرد. اگر خالی باشد، از دامنه‌ای که پنل با آن باز شده استفاده می‌شود (بدون پورت وب).
+
+## اجرای ویندوزی
+
+فقط `start.bat` را اجرا کنید. در اولین اجرا:
+
+1. Node.js 20+ را در صورت نبود داخل `.runtime\node` دانلود می‌کند.
+2. FFmpeg را در صورت نبود داخل `.runtime\ffmpeg` دانلود می‌کند.
+3. Python 3 را در صورت نبود داخل `.runtime\python` دانلود می‌کند.
+4. وابستگی‌های Node را با `npm install --omit=dev` نصب می‌کند.
+5. سرور را روی `http://127.0.0.1:9998` اجرا می‌کند و پنل را در مرورگر باز می‌کند.
+
+داده‌های واقعی در پوشه `data` باقی می‌مانند و با حذف `.runtime` یا اجرای دوباره `start.bat` پاک نمی‌شوند. برای بستن سرور، پنجره همان کنسول را ببندید یا `Ctrl+C` بزنید.
+
+## استقرار روی سرور
+
+- فایروال: پورت‌های `9998/tcp` (پنل) و `1935/tcp` (دریافت OBS) را باز کنید.
+- برای HTTPS، یک reverse proxy مثل Caddy/nginx در جلوی `127.0.0.1:9998` قرار دهید. پنل خودش TLS ندارد.
+- سرویس را با NSSM یا Task Scheduler به‌صورت خودکار اجرا کنید.
+- از پوشه `data` نسخه پشتیبان بگیرید؛ شامل کاربران، کلیدها، سهمیه و آمار مصرف است. این پوشه را عمومی سرو نکنید.
+- پشت reverse proxy، متغیر `PORT` را تغییر ندهید و هدرهای `X-Forwarded-*` را حفظ کنید.
+
+## امنیت
+
+- رمزها با `scrypt` و نمک اختصاصی ذخیره می‌شوند.
+- نشست‌ها با کوکی `HttpOnly` و `SameSite=Lax` و توکن هش‌شده در سرور نگهداری می‌شوند.
+- درخواست‌های تغییردهنده با بررسی Origin محافظت می‌شوند.
+- کلیدهای پخش فقط برای صاحب حساب و مدیر نمایش داده می‌شوند.
+- پخش (Playback) از سرور RTMP فقط برای رله‌های محلی سرور مجاز است و درخواست‌های بیرونی رد می‌شوند.
+- پوشش `data/` در `.gitignore` قرار دارد.
+- محدودیت تلاش ورود/ثبت‌نام به‌صورت ساده اعمال می‌شود.
+
+## معماری
+
+```text
+OBS ──rtmp://host:1935/live/KEY──► Node RTMP ingest (node-media-server)
+                                        │
+                          ┌─────────────┼──────────────┐
+                          ▼             ▼              ▼
+                     ffmpeg relay   ffmpeg relay   aparat_push.py
+                     (YouTube)      (Twitch/…)     (Aparat)
+                          │             │              │
+                          ▼             ▼              ▼
+                    مقصدهای کاربر (هر کدام مستقل و قابل خاموش/روشن)
 ```
-POST /stop
-```
-* Stops the active FFmpeg process and disables auto-restarts.
 
-# Customization
-Modify the VALID_KEYS dictionary to define allowed stream keys per RTMP server.
-Edit the run_ffmpeg() function to define your input and output stream URLs.
+- `server/ingest.js` دریافت RTMP و احراز کلید/وضعیت حساب
+- `server/relays.js` سوپروایزر رله‌ها، شمارش بایت واقعی و اعمال سهمیه
+- `server/db.js` ذخیره‌سازی JSON اتمیک با بارگذاری مجدد برای CLI
+- `server/index.js` API و سرو صفحات
+- `public/` رابط کاربری RTL
+- `aparat_push.py` عامل پوش آپارات
 
-#📌 Important Notes:
+## ساختار پوشه‌ها
 
-Since Aparat may block direct streaming from some systems, it's recommended to use FFmpeg for relaying your stream.
-
-You can download a reliable FFmpeg build from the official source: https://www.gyan.dev/ffmpeg/builds/
-
-Recommended file: ```ffmpeg-release-essentials.zip```
-
-After downloading and extracting the files, add the following path to your system’s Environment Variables so you can run FFmpeg from anywhere:
-
-Path: ```C:\ffmpeg\bin```
-
-* How to add:
-
-Right-click on This PC, go to Properties.
-
-Click on Advanced system settings.
-
-In the Environment Variables section, find System variables, select Path, and click Edit.
-
-Add the path C:\ffmpeg\bin and save.
-
-To verify FFmpeg is installed correctly, open a terminal or command prompt and run:
-
-```
-ffmpeg -version
-```
-#  PSAAMA Instruction
-
-* NGINX RTMP server receives the stream.
-
-* On stream start `(on_publish)`, NGINX calls `/auth`:
-- Checks if the provided stream key is valid.
-- If valid, launches a separate ffmpeg process/thread to push the stream to the user’s configured output.
-* On stream stop (on_publish_done), NGINX calls /stop:
-- Terminates the ffmpeg process/thread for that key.
-
-* 🔧 Configuration
-
-`
-	VALID_KEYS = {
-		"live1": ["user1_key"],
-		"live2": ["user2_key"],
-	}
-
-	OUTPUT_URLS = {
-		"user1_key": "rtmp://aparat.com/event/YOUR_STREAM_KEY",
-		"user2_key": "rtmp://aparat.com/event/YOUR_STREAM_KEY",
-	}
-`
-* ⚙️ RTMP Server (NGINX Example)
-
-`
-	application live1 {
-		live on;
-		wait_key on;
-		on_publish      http://127.0.0.1:8000/auth?server=live1;
-		on_publish_done http://127.0.0.1:8000/stop?name=$name;
-	}
-`
-
-# 💡 Future Improvements
-
-* a database (e.g. SQLite, MongoDB) for managing keys and output URLs.
-
-* Add real-time dashboard for active streams.
-
-* Support multiple simultaneous outputs (multi-platform streaming).
-
-* Add web UI for users to manage their keys and outputs.
-
-
-
+- `server/` سرور، API و رله‌ها
+- `public/` پنل وب فارسی
+- `data/` کاربران، کلیدها، سهمیه و آمار مصرف؛ از این پوشه پشتیبان بگیرید
+- `.runtime/` پیش‌نیازهای دانلودشده توسط `start.bat`؛ قابل حذف و نصب مجدد
+- `aparat_push.py` عامل پوش آپارات
+- `start.bat` نصب پیش‌نیازها و اجرای سرور

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Restream 42 — پنل پخش چند پلتفرمی</title>
+    <meta name="description" content="استریم همزمان به یوتیوب، توییچ، کیک، ری‌استریم و آپارات با پنل مدیریت و سهمیه حجم مصرفی." />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="auth-shell">
+      <section class="auth-visual">
+        <div class="auth-glow"></div>
+        <div class="brand" style="margin-bottom: 30px">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z" /></svg>
+          </span>
+          <span class="brand-name">
+            <span>Restream 42</span>
+            <small>MULTI-PLATFORM STUDIO</small>
+          </span>
+        </div>
+
+        <div class="auth-eyebrow"><span></span> پخش همزمان، ساده و کنترل‌شده</div>
+        <h1 class="auth-title">
+          یک استریم،<br />
+          همه پلتفرم‌ها در <em>یک پنل</em>
+        </h1>
+        <p class="auth-lead">
+          کافی است یک‌بار به سرور ما وصل شوید؛ ما تصویر شما را همزمان به یوتیوب، توییچ، کیک،
+          ری‌استریم و آپارات می‌فرستیم. هر مقصد را می‌توانید همان لحظه روشن یا خاموش کنید.
+        </p>
+
+        <div class="feature-list">
+          <div class="feature">
+            <span class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18" stroke-linecap="round" /></svg>
+            </span>
+            <div>
+              <strong>پنج مقصد آماده + RTMP دلخواه</strong>
+              <small>یوتیوب، توییچ، کیک، ری‌استریم و آپارات با تنظیمات اختصاصی</small>
+            </div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke-linejoin="round" /></svg>
+            </span>
+            <div>
+              <strong>روشن و خاموش کردن لحظه‌ای</strong>
+              <small>بدون قطع شدن استریم اصلی، هر خروجی را جدا کنترل کنید</small>
+            </div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 9-9M3 4v8h8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </span>
+            <div>
+              <strong>سهمیه حجم مصرفی شفاف</strong>
+              <small>مصرف خود را زنده ببینید و مدیر سقف مصرف را تعیین می‌کند</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-stats">
+          <div><b>5+</b><small>پلتفرم پخش</small></div>
+          <div><b>1</b><small>لینک پخش برای شما</small></div>
+          <div><b>24/7</b><small>پایش اتصال مقصدها</small></div>
+        </div>
+      </section>
+
+      <section class="auth-panel">
+        <div class="card auth-card">
+          <div class="auth-card-head">
+            <h2 id="authTitle">ورود به حساب</h2>
+            <p id="authSubtitle">برای مدیریت پخش‌ها وارد شوید.</p>
+          </div>
+
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab active" data-tab="login">ورود</button>
+            <button type="button" class="tab" data-tab="register">ثبت‌نام</button>
+          </div>
+
+          <form id="loginForm" class="auth-form" novalidate>
+            <div id="loginError" class="form-error">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" stroke-linecap="round" /></svg>
+              <span></span>
+            </div>
+            <label class="field">
+              <span>نام کاربری</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round" /></svg>
+                <input class="input" name="username" autocomplete="username" placeholder="username" dir="ltr" required />
+              </div>
+            </label>
+            <label class="field">
+              <span>رمز عبور</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                <input class="input" name="password" type="password" autocomplete="current-password" placeholder="••••••••" dir="ltr" required />
+                <button type="button" class="input-suffix" data-eye aria-label="نمایش رمز">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>
+                </button>
+              </div>
+            </label>
+            <button class="btn btn-primary btn-lg btn-block" type="submit" id="loginBtn">ورود به پنل</button>
+          </form>
+
+          <form id="registerForm" class="auth-form hidden" novalidate>
+            <div id="registerError" class="form-error">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" stroke-linecap="round" /></svg>
+              <span></span>
+            </div>
+            <label class="field">
+              <span>نام نمایشی</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" stroke-linecap="round" /></svg>
+                <input class="input" name="displayName" autocomplete="name" placeholder="مثلاً حسین" maxlength="40" required />
+              </div>
+            </label>
+            <label class="field">
+              <span>نام کاربری</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round" /></svg>
+                <input class="input" name="username" autocomplete="username" placeholder="hossein" dir="ltr" maxlength="24" required />
+              </div>
+            </label>
+            <label class="field">
+              <span>ایمیل (اختیاری)</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" stroke-linecap="round" /></svg>
+                <input class="input" name="email" type="email" autocomplete="email" placeholder="you@example.com" dir="ltr" />
+              </div>
+            </label>
+            <label class="field">
+              <span>رمز عبور</span>
+              <div class="input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                <input class="input" name="password" type="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر" dir="ltr" required />
+                <button type="button" class="input-suffix" data-eye aria-label="نمایش رمز">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>
+                </button>
+              </div>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" name="terms" checked />
+              <span>قوانین استفاده و محدودیت حجم را می‌پذیرم.</span>
+            </label>
+            <button class="btn btn-primary btn-lg btn-block" type="submit" id="registerBtn">ساخت حساب</button>
+            <p class="form-foot">پس از ثبت‌نام، حساب شما برای تأیید به مدیر ارسال می‌شود.</p>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div class="toasts"></div>
+    <script type="module" src="/js/auth.js"></script>
+  </body>
+</html>

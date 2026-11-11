@@ -1,0 +1,21 @@
+{
+  "name": "restream42",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Restream.42 - multi-platform RTMP relay control panel with admin approval, quotas and a Windows launcher",
+  "main": "server/index.js",
+  "author": "Restream.42",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "cli": "node cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "node-media-server": "^2.7.4"
+  }
+}

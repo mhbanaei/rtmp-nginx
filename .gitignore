@@ -1,0 +1,8 @@
+node_modules/
+data/
+.runtime/
+.tmp-rtmp-test/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
