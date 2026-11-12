@@ -9,22 +9,22 @@ const PLATFORMS = {
   youtube: {
     label: 'YouTube',
     hint: 'YouTube Studio → Live → Stream key',
-    serverUrl: 'rtmp://a.rtmp.youtube.com/live2'
+    serverUrl: 'rtmp://a.rtmp.youtube.com/live2/'
   },
   twitch: {
     label: 'Twitch',
     hint: 'Twitch Dashboard → Settings → Stream → Primary Stream key',
-    serverUrl: 'rtmp://live.twitch.tv/app'
+    serverUrl: 'rtmp://dus01.contribute.live-video.net/app/'
   },
   kick: {
     label: 'Kick',
     hint: 'Kick Dashboard → Settings → Stream key (uses RTMPS)',
-    serverUrl: 'rtmps://fa723fc1b171.global-contribute.live-video.net/app'
+    serverUrl: 'rtmps://fa723fc1b171.global-contribute.live-video.net/'
   },
   restream: {
     label: 'Restream',
     hint: 'Restream Studio → Destinations → RTMP key',
-    serverUrl: 'rtmp://live.restream.io/live'
+    serverUrl: 'rtmp://frankfurt.restream.io/live/'
   },
   aparat: {
     label: 'Aparat',
@@ -33,12 +33,12 @@ const PLATFORMS = {
   }
 };
 
-const DEFAULT_ALLOWED_PLATFORMS = ['restream'];
+const DEFAULT_ALLOWED_PLATFORMS = ['restream', 'aparat'];
 const ALLOWED_PLATFORMS = [...Object.keys(PLATFORMS), 'custom'];
 
 function normalizeAllowedPlatforms(value, role = 'user') {
   const fallback = role === 'admin' ? ALLOWED_PLATFORMS.slice() : DEFAULT_ALLOWED_PLATFORMS.slice();
-  const source = Array.isArray(value) ? value : fallback;
+  const source = Array.isArray(value) && value.length ? value : fallback;
   const platforms = [];
   for (const platform of source) {
     if (!ALLOWED_PLATFORMS.includes(platform) || platforms.includes(platform)) continue;
@@ -169,8 +169,11 @@ function hydrate(db) {
     for (const dest of user.destinations) {
       dest.id = dest.id || crypto.randomUUID();
       dest.platform = PLATFORMS[dest.platform] ? dest.platform : 'custom';
-      dest.label = dest.label || (PLATFORMS[dest.platform] || {}).label || 'Custom';
-      dest.serverUrl = dest.serverUrl || '';
+      const platformDefaults = PLATFORMS[dest.platform];
+      dest.label = dest.label || (platformDefaults || {}).label || 'Custom';
+      // Built-in destinations always use the current platform endpoint.
+      // Only Custom RTMP keeps a user-supplied server URL.
+      dest.serverUrl = platformDefaults ? platformDefaults.serverUrl : dest.serverUrl || '';
       dest.streamKey = dest.streamKey || '';
       dest.enabled = Boolean(dest.enabled);
       dest.compat = Boolean(dest.compat);

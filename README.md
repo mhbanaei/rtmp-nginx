@@ -67,14 +67,14 @@ npm start
 
 | پلتفرم | آدرس پیش‌فرض | ورودی لازم |
 | --- | --- | --- |
-| YouTube | `rtmp://a.rtmp.youtube.com/live2` | Stream key |
-| Twitch | `rtmp://live.twitch.tv/app` | Primary stream key |
-| Kick | `rtmps://fa723fc1b171.global-contribute.live-video.net/app` | Stream key |
-| Restream | `rtmp://live.restream.io/live` | RTMP key |
+| YouTube | `rtmp://a.rtmp.youtube.com/live2/` | Stream key |
+| Twitch | `rtmp://dus01.contribute.live-video.net/app/` | Primary stream key |
+| Kick | `rtmps://fa723fc1b171.global-contribute.live-video.net/` | Stream key |
+| Restream | `rtmp://frankfurt.restream.io/live/` | RTMP key |
 | Aparat | کلید پخش (یا لینک کامل Push) | `rtmp://rtmp.cdn.asset.aparat.com:443/event/<stream-key>` |
 | Custom | هر آدرس RTMP/RTMPS | آدرس + کلید |
 
-> به‌صورت پیش‌فرض هر کاربر فقط مقصد **Restream** را می‌بیند. ادمین از پنجره مدیریت کاربر می‌تواند YouTube، Twitch، Kick، آپارات و RTMP دلخواه را با تیک فعال کند.
+> به‌صورت پیش‌فرض هر کاربر فقط مقصدهای **Restream** و **Aparat** را می‌بیند. ادمین از پنجره مدیریت کاربر می‌تواند YouTube، Twitch، Kick و RTMP دلخواه را با تیک فعال کند. آدرس سرور پلتفرم‌های داخلی ثابت است و فقط آدرس Custom RTMP قابل ویرایش است.
 
 ### چرا آپارات جداگانه است؟
 

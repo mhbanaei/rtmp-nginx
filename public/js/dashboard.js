@@ -215,11 +215,8 @@ function destCard(dest, data) {
   const disabled = data.user.quotaBlocked;
   const aparat = dest.platform === 'aparat';
   const aparatServer = 'rtmp://rtmp.cdn.asset.aparat.com:443/event';
-  const placeholderServer = aparat
-    ? aparatServer
-    : meta.name === 'YouTube'
-      ? 'rtmp://a.rtmp.youtube.com/live2'
-      : dest.serverUrl || 'rtmp://...';
+  const custom = dest.platform === 'custom';
+  const placeholderServer = aparat ? aparatServer : dest.serverUrl || 'rtmp://...';
 
   return `<article class="dest-card ${dest.enabled ? 'on' : ''}" data-id="${esc(dest.id)}" style="--brand:${meta.color}">
     <div class="dest-head">
@@ -241,7 +238,7 @@ function destCard(dest, data) {
     <div class="dest-body">
       <label class="field">
         <span>${aparat ? 'آدرس سرور آپارات' : 'آدرس سرور RTMP'}</span>
-        <input class="input" data-field="serverUrl" value="${esc(aparat ? dest.serverUrl || aparatServer : dest.serverUrl)}" placeholder="${esc(placeholderServer)}" ${aparat ? '' : 'readonly'} dir="ltr" />
+        <input class="input" data-field="serverUrl" value="${esc(aparat ? dest.serverUrl || aparatServer : dest.serverUrl)}" placeholder="${esc(placeholderServer)}" ${custom ? '' : 'readonly'} title="${custom ? 'آدرس سرور مقصد دلخواه' : 'آدرس این پلتفرم ثابت است'}" dir="ltr" />
       </label>
       <label class="field">
         <span>${aparat ? 'کلید پخش آپارات' : 'کلید پخش'}</span>

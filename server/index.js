@@ -429,6 +429,9 @@ async function startServer(options = {}) {
 
     const nextServer = body.serverUrl === undefined ? dest.serverUrl : sanitizeText(body.serverUrl, 500);
     const nextKey = body.streamKey === undefined ? dest.streamKey : sanitizeText(body.streamKey, 500);
+    if (dest.platform !== 'custom' && nextServer !== dest.serverUrl) {
+      return res.status(400).json({ error: 'آدرس سرور این پلتفرم ثابت است و قابل تغییر نیست.' });
+    }
     const error = validateDestinationInput(dest.platform, nextServer, nextKey);
     if (error) return res.status(400).json({ error });
 
